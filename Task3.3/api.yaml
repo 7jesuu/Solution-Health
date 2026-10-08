@@ -1,0 +1,165 @@
+openapi: 3.0.3
+info:
+  title: Здоровье+ Mobile API
+  version: 1.0.0
+  description: API для мобильного приложения пациентов
+
+paths:
+  /api/v1/appointments:
+    get:
+      summary: Получение списка записей пациента
+      description: |
+        Возвращает список записей текущего авторизованного пациента.
+        Поддерживает фильтрацию по статусу и пагинацию.
+      operationId: getPatientAppointments
+      tags:
+        - Appointments
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          description: Фильтр по статусу записи
+          required: false
+          schema:
+            type: string
+            enum: [upcoming, past, cancelled, all]
+            default: upcoming
+          example: upcoming
+        - name: limit
+          in: query
+          description: Количество записей на странице (макс. 50)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+          example: 20
+        - name: offset
+          in: query
+          description: Смещение от начала списка
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          example: 0
+      responses:
+        '200':
+          description: Успешный ответ со списком записей
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Appointment'
+                  pagination:
+                    type: object
+                    properties:
+                      limit:
+                        type: integer
+                        example: 20
+                      offset:
+                        type: integer
+                        example: 0
+                      total:
+                        type: integer
+                        example: 47
+                required:
+                  - data
+                  - pagination
+              example:
+                data:
+                  - id: "appt_7f3a9c2e"
+                    doctorName: "Иванова Е.С."
+                    specialty: "Терапевт"
+                    clinicName: "Клиника на Ленина"
+                    startsAt: "2026-04-12T10:30:00+05:00"
+                    status: "upcoming"
+                    hasLabTests: true
+                  - id: "appt_1b8d4f6a"
+                    doctorName: "Петров А.В."
+                    specialty: "Кардиолог"
+                    clinicName: "Клиника на Ленина"
+                    startsAt: "2026-04-18T14:00:00+05:00"
+                    status: "upcoming"
+                    hasLabTests: false
+                pagination:
+                  limit: 20
+                  offset: 0
+                  total: 47
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: "UNAUTHORIZED"
+                message: "Требуется аутентификация"
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: "INTERNAL_ERROR"
+                message: "Произошла внутренняя ошибка. Попробуйте позже"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT-токен, полученный при авторизации пациента
+
+  schemas:
+    Appointment:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "appt_7f3a9c2e"
+        doctorName:
+          type: string
+          example: "Иванова Е.С."
+        specialty:
+          type: string
+          example: "Терапевт"
+        clinicName:
+          type: string
+          example: "Клиника на Ленина"
+        startsAt:
+          type: string
+          format: date-time
+          example: "2026-04-12T10:30:00+05:00"
+        status:
+          type: string
+          enum: [upcoming, past, cancelled]
+          example: "upcoming"
+        hasLabTests:
+          type: boolean
+          example: true
+      required:
+        - id
+        - doctorName
+        - specialty
+        - startsAt
+        - status
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+      required:
+        - code
+        - message
